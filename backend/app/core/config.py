@@ -10,8 +10,14 @@ class Settings(BaseSettings):
 
     database_url: PostgresDsn
     secret_key: str
+    gemini_model: str = "gemini-3.5-flash"
     gemini_api_key: str | None = None
     access_token_expire_minutes: int = 60 * 24
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_from_email: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",
