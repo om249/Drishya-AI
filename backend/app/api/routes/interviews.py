@@ -30,6 +30,40 @@ def get_owned_interview(interview_id: int, user_id: int, db: Session) -> Intervi
     return interview
 
 
+def get_candidate_question_history(interview: Interview, db: Session) -> list[str]:
+    """Return recent questions from this candidate's matching interview track."""
+    statement = (
+        select(Question.question_text)
+        .join(Interview, Interview.id == Question.interview_id)
+        .where(
+            Interview.user_id == interview.user_id,
+            Interview.type == interview.type,
+            Interview.role == interview.role,
+            Interview.subject == interview.subject,
+        )
+        .order_by(Question.created_at.desc())
+        .limit(40)
+    )
+    return list(db.scalars(statement))
+
+
+def get_recent_candidate_scores(interview: Interview, db: Session) -> list[int]:
+    statement = (
+        select(Answer.score)
+        .join(Question, Question.id == Answer.question_id)
+        .join(Interview, Interview.id == Question.interview_id)
+        .where(
+            Interview.user_id == interview.user_id,
+            Interview.type == interview.type,
+            Interview.role == interview.role,
+            Interview.subject == interview.subject,
+        )
+        .order_by(Answer.created_at.desc())
+        .limit(3)
+    )
+    return list(db.scalars(statement))
+
+
 @router.post("", response_model=InterviewResponse, status_code=status.HTTP_201_CREATED)
 def create_interview(payload: InterviewCreate, current_user: CurrentUser, db: DbSession) -> Interview:
     interview = Interview(
@@ -66,15 +100,22 @@ def start_interview(interview_id: int, current_user: CurrentUser, db: DbSession)
     interview = get_owned_interview(interview_id, current_user.id, db)
     if interview.status != "created":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Interview has already started")
+    previous_questions = get_candidate_question_history(interview, db)
+    target_difficulty = interview_service.adaptive_difficulty(
+        interview.difficulty, get_recent_candidate_scores(interview, db)
+    )
     try:
-        generated = interview_service.question(interview, sequence=1)
+        generated = interview_service.question(
+            interview, sequence=1, previous_questions=previous_questions,
+            difficulty=target_difficulty,
+        )
     except Exception as error:
         logger.exception("Nova question generation failed")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Nova could not generate a question: {error}"
+            detail="Nova could not generate a question. Please try again.",
         ) from error
-    question = Question(interview_id=interview.id, question_text=generated.question_text, question_type=generated.question_type, difficulty=interview.difficulty, sequence_number=1)
+    question = Question(interview_id=interview.id, question_text=generated.question_text, question_type=generated.question_type, difficulty=target_difficulty, sequence_number=1)
     interview.status = "in_progress"
     interview.started_at = datetime.now(timezone.utc)
     db.add(question)
@@ -97,7 +138,10 @@ def submit_answer(interview_id: int, payload: AnswerSubmit, current_user: Curren
         evaluation = interview_service.evaluate(interview, question.question_text, payload.answer_text)
     except Exception as error:
         logger.exception("Nova answer evaluation failed")
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Nova could not evaluate the answer{error}") from error
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Nova could not evaluate this answer. Please try again.",
+        ) from error
     answer = Answer(question_id=question.id, user_id=current_user.id, answer_text=payload.answer_text.strip(), **evaluation.model_dump())
     db.add(answer)
     db.commit()
@@ -113,13 +157,22 @@ def next_question(interview_id: int, current_user: CurrentUser, db: DbSession) -
     questions = list(db.scalars(select(Question).where(Question.interview_id == interview.id).order_by(Question.sequence_number)))
     if not questions or db.scalar(select(Answer).where(Answer.question_id == questions[-1].id)) is None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Answer the current question before continuing")
-    history = " | ".join(question.question_text for question in questions[-3:])
+    previous_questions = get_candidate_question_history(interview, db)
+    recent_scores = get_recent_candidate_scores(interview, db)
+    target_difficulty = interview_service.adaptive_difficulty(interview.difficulty, recent_scores)
+    history = "Recent answer scores (newest first): " + (", ".join(map(str, recent_scores)) or "not available")
     try:
-        generated = interview_service.question(interview, sequence=len(questions) + 1, history=history)
+        generated = interview_service.question(
+            interview, sequence=len(questions) + 1, history=history,
+            previous_questions=previous_questions, difficulty=target_difficulty,
+        )
     except Exception as error:
         logger.exception("Nova question generation failed")
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Nova could not generate a question{error}") from error
-    question = Question(interview_id=interview.id, question_text=generated.question_text, question_type=generated.question_type, difficulty=interview.difficulty, sequence_number=len(questions) + 1)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Nova could not generate a question. Please try again.",
+        ) from error
+    question = Question(interview_id=interview.id, question_text=generated.question_text, question_type=generated.question_type, difficulty=target_difficulty, sequence_number=len(questions) + 1)
     db.add(question)
     db.commit()
     db.refresh(question)
