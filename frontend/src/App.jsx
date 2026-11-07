@@ -21,6 +21,16 @@ import {
   Zap,
   Moon,
   Sun,
+  BriefcaseBusiness,
+  FileSearch,
+  BookOpen,
+  ChartNoAxesCombined,
+  Settings,
+  Users,
+  GraduationCap,
+  Menu,
+  X,
+  LockKeyhole,
 } from 'lucide-react'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
@@ -341,52 +351,152 @@ function ErrorMessage({ message }) {
   )
 }
 
-function Dashboard({ start }) {
-  const [data, setData] = useState()
+
+function Dashboard({ start, navigate }) {
+  const [data, setData] = useState(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
+    let active = true
+
     api('/dashboard')
-      .then(setData)
-      .catch((error) => setError(error.message))
+      .then((result) => {
+        if (active) setData(result)
+      })
+      .catch((err) => {
+        if (active) setError(err.message)
+      })
+
+    return () => {
+      active = false
+    }
   }, [])
 
   if (error) {
-    return <ErrorMessage message={error} />
+    return (
+      <div className="page-content">
+        <ErrorMessage message={error} />
+        <button
+          className="secondary-btn"
+          onClick={() => window.location.reload()}
+        >
+          <RotateCcw size={17} />
+          Retry
+        </button>
+      </div>
+    )
   }
 
-  if (!data) {
-    return <LoadingState />
-  }
+  if (!data) return <LoadingState />
+
+  const topics = data.topic_performance || []
+  const recommendations = data.recommendations || []
+  const strengths = data.strengths || []
+
+  const quickActions = [
+    {
+      title: 'Nova AI Coach',
+      description: 'Get personalized interview preparation.',
+      icon: BrainCircuit,
+      page: 'nova',
+      label: 'Explore coach',
+    },
+    {
+      title: 'Resume Analyzer',
+      description: 'Improve your resume and identify skill gaps.',
+      icon: FileSearch,
+      page: 'resume',
+      label: 'Explore analyzer',
+    },
+    {
+      title: 'Coding Arena',
+      description: 'Strengthen your programming and DSA skills.',
+      icon: Code2,
+      page: 'coding',
+      label: 'Explore coding',
+    },
+    {
+      title: 'Assessment Center',
+      description: 'Prepare for aptitude and technical tests.',
+      icon: Target,
+      page: 'assessments',
+      label: 'Explore assessments',
+    },
+    {
+      title: 'Learning Roadmaps',
+      description: 'Build a structured learning routine.',
+      icon: BookOpen,
+      page: 'learning',
+      label: 'Explore roadmaps',
+    },
+    {
+      title: 'Career Hub',
+      description: 'Organize your career preparation.',
+      icon: BriefcaseBusiness,
+      page: 'career',
+      label: 'Explore career hub',
+    },
+  ]
 
   return (
-    <div className="page-content">
-      <section className="dashboard-hero">
+    <div className="page-content dashboard-page">
+
+      <section className="dashboard-heading">
         <div>
+          <span className="section-kicker">
+            YOUR PERSONAL WORKSPACE
+          </span>
+          <h1>Preparation overview</h1>
+          <p>
+            Track your progress, strengthen your skills and
+            prepare for your next opportunity with Drishya.
+          </p>
+        </div>
+
+        <div className="dashboard-live-status">
+          <span className="status-dot" />
+          Nova is ready
+        </div>
+      </section>
+
+      <section className="dashboard-hero">
+        <div className="dashboard-hero-content">
           <div className="hero-badge">
             <Sparkles size={15} />
-            Nova is ready
+            Your AI placement coach
           </div>
 
           <h1>
-            Build confidence.
+            Turn preparation
             <br />
-            <span>One interview at a time.</span>
+            <span>into progress.</span>
           </h1>
 
           <p>
-            Practice what matters, identify your weak areas, and
-            keep improving until you're ready for the real interview.
+            Practice interviews, understand your weak areas
+            and build the confidence to perform in real
+            placement interviews.
           </p>
 
-          <button onClick={start} className="primary-btn">
-            <Play size={18} fill="currentColor" />
-            Start mock interview
-          </button>
+          <div className="dashboard-hero-actions">
+            <button onClick={start} className="primary-btn">
+              <Play size={17} fill="currentColor" />
+              Start mock interview
+              <ArrowRight size={17} />
+            </button>
+
+            <button
+              onClick={() => navigate('analytics')}
+              className="dashboard-text-action"
+            >
+              View performance
+              <ArrowRight size={16} />
+            </button>
+          </div>
         </div>
 
         <div className="nova-orb">
-          <div className="nova-orb-inner">
+          <div className="nova-orb-inner ai-glow">
             <BrainCircuit size={58} />
           </div>
           <span>Nova</span>
@@ -394,55 +504,83 @@ function Dashboard({ start }) {
         </div>
       </section>
 
-      <div className="stats-grid">
-        <StatCard
-          icon={<Target />}
-          value={`${data.overall_readiness}%`}
-          label="Overall readiness"
-        />
+      <section className="dashboard-section">
+        <div className="dashboard-section-heading">
+          <div>
+            <span className="section-kicker">YOUR PROGRESS</span>
+            <h2>Preparation at a glance</h2>
+          </div>
+          <span className="dashboard-section-note">
+            Based on your interview history
+          </span>
+        </div>
 
-        <StatCard
-          icon={<MessageSquare />}
-          value={data.completed_interviews}
-          label="Completed interviews"
-        />
+        <div className="stats-grid">
+          <StatCard
+            icon={<Target />}
+            value={`${data.overall_readiness ?? 0}%`}
+            label="Overall readiness"
+          />
 
-        <StatCard
-          icon={<Trophy />}
-          value={data.strengths.length || '—'}
-          label="Recorded strengths"
-        />
+          <StatCard
+            icon={<MessageSquare />}
+            value={data.completed_interviews ?? 0}
+            label="Completed interviews"
+          />
 
-        <StatCard
-          icon={<Zap />}
-          value={data.topic_performance.length || '—'}
-          label="Topics practiced"
-        />
-      </div>
+          <StatCard
+            icon={<Trophy />}
+            value={strengths.length}
+            label="Recorded strengths"
+          />
+
+          <StatCard
+            icon={<Zap />}
+            value={topics.length}
+            label="Topics practiced"
+          />
+        </div>
+      </section>
 
       <div className="dashboard-grid">
+
         <section className="content-card">
           <div className="section-heading">
             <div>
-              <span className="section-kicker">Performance</span>
+              <span className="section-kicker">PERFORMANCE</span>
               <h2>Topic performance</h2>
             </div>
-            <Target size={20} />
+            <ChartNoAxesCombined size={21} />
           </div>
 
-          {data.topic_performance.length ? (
+          {topics.length ? (
             <div className="performance-list">
-              {data.topic_performance.map((topic) => (
-                <div key={topic.topic} className="performance-row">
+              {topics.map((topic) => (
+                <div
+                  key={topic.topic}
+                  className="performance-row"
+                >
                   <div className="performance-label">
                     <span>{topic.topic}</span>
                     <strong>{topic.score}%</strong>
                   </div>
 
-                  <div className="progress-track">
+                  <div
+                    className="progress-track"
+                    role="progressbar"
+                    aria-valuenow={topic.score}
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-label={`${topic.topic} performance`}
+                  >
                     <div
                       className="progress-fill"
-                      style={{ width: `${topic.score}%` }}
+                      style={{
+                        width: `${Math.max(
+                          0,
+                          Math.min(100, topic.score)
+                        )}%`,
+                      }}
                     />
                   </div>
                 </div>
@@ -451,8 +589,8 @@ function Dashboard({ start }) {
           ) : (
             <EmptyState
               icon={<Target />}
-              title="No performance data yet"
-              text="Complete your first interview and Nova will start tracking your progress."
+              title="Your progress starts here"
+              text="Complete your first interview to see your topic-wise performance."
             />
           )}
         </section>
@@ -460,16 +598,19 @@ function Dashboard({ start }) {
         <section className="content-card">
           <div className="section-heading">
             <div>
-              <span className="section-kicker">Personalized</span>
-              <h2>Nova's focus</h2>
+              <span className="section-kicker">PERSONALIZED</span>
+              <h2>Nova's recommendations</h2>
             </div>
-            <Sparkles size={20} />
+            <Sparkles size={21} />
           </div>
 
-          {data.recommendations.length ? (
+          {recommendations.length ? (
             <div className="recommendation-list">
-              {data.recommendations.map((recommendation) => (
-                <div key={recommendation} className="recommendation-item">
+              {recommendations.map((recommendation, index) => (
+                <div
+                  key={`${index}-${recommendation}`}
+                  className="recommendation-item"
+                >
                   <div className="recommendation-icon">
                     <ChevronRight size={16} />
                   </div>
@@ -480,15 +621,59 @@ function Dashboard({ start }) {
           ) : (
             <EmptyState
               icon={<Sparkles />}
-              title="Nova is waiting"
-              text="Finish your first interview to receive personalized recommendations."
+              title="Nova is getting ready"
+              text="Complete an interview to receive recommendations based on your performance."
             />
           )}
         </section>
+
       </div>
+
+      <section className="dashboard-section quick-access-section">
+        <div className="dashboard-section-heading">
+          <div>
+            <span className="section-kicker">EXPLORE DRISHYA</span>
+            <h2>Your preparation modules</h2>
+            <p>
+              Everything you need to work towards your career goals.
+            </p>
+          </div>
+        </div>
+
+        <div className="dashboard-quick-grid">
+          {quickActions.map((item) => {
+            const Icon = item.icon
+
+            return (
+              <button
+                type="button"
+                key={item.page}
+                className="dashboard-action-card"
+                onClick={() => navigate(item.page)}
+              >
+                <div className="dashboard-action-icon">
+                  <Icon size={21} />
+                </div>
+
+                <div className="dashboard-action-content">
+                  <strong>{item.title}</strong>
+                  <span>{item.description}</span>
+                </div>
+
+                <div className="dashboard-action-footer">
+                  <span>{item.label}</span>
+                  <ArrowRight size={16} />
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </section>
+
     </div>
   )
 }
+
 
 function StatCard({ icon, value, label }) {
   return (
@@ -1047,6 +1232,149 @@ function LoadingState() {
   )
 }
 
+
+const workspaceModules = {
+  nova: {
+    eyebrow: 'YOUR AI CAREER COACH',
+    title: 'Meet Nova',
+    description:
+      'Your personal AI placement coach. Practice interviews, receive feedback and build a preparation strategy based on your performance.',
+    features: [
+      'Personalized interview preparation',
+      'AI-powered answer evaluation',
+      'Adaptive difficulty and recommendations',
+    ],
+    action: 'Start an AI interview',
+    destination: 'setup',
+  },
+  resume: {
+    eyebrow: 'RESUME INTELLIGENCE',
+    title: 'Build a stronger resume',
+    description:
+      'Analyze your resume, identify missing skills and improve its alignment with your target job descriptions.',
+    features: [
+      'Resume parsing and skill extraction',
+      'ATS compatibility analysis',
+      'Job description matching',
+    ],
+  },
+  coding: {
+    eyebrow: 'CODING PRACTICE',
+    title: 'Sharpen your coding skills',
+    description:
+      'Build problem-solving confidence through structured programming and DSA practice.',
+    features: [
+      'Topic-wise coding challenges',
+      'Difficulty-based practice',
+      'Coding performance tracking',
+    ],
+  },
+  assessments: {
+    eyebrow: 'ASSESSMENT CENTER',
+    title: 'Test your placement readiness',
+    description:
+      'Prepare for aptitude rounds, technical assessments and company placement examinations.',
+    features: [
+      'Quantitative aptitude',
+      'Logical reasoning and verbal ability',
+      'Technical MCQ assessments',
+    ],
+  },
+  learning: {
+    eyebrow: 'LEARNING PATHWAYS',
+    title: 'Learn with a clear direction',
+    description:
+      'Follow structured learning roadmaps and focus on the skills that matter for your career goals.',
+    features: [
+      'Personalized learning roadmaps',
+      'Skill progress tracking',
+      'Revision and practice plans',
+    ],
+  },
+  career: {
+    eyebrow: 'CAREER HUB',
+    title: 'Take control of your career',
+    description:
+      'Organize your job search, track applications and prepare for the companies you want to join.',
+    features: [
+      'Job application tracking',
+      'Company preparation guides',
+      'Placement preparation checklist',
+    ],
+  },
+  analytics: {
+    eyebrow: 'PERFORMANCE INTELLIGENCE',
+    title: 'Understand your progress',
+    description:
+      'Review your preparation history, strengths, weak areas and career readiness.',
+    features: [
+      'Interview performance trends',
+      'Topic-wise strengths and weaknesses',
+      'Personalized improvement insights',
+    ],
+  },
+  institutions: {
+    eyebrow: 'INSTITUTION WORKSPACE',
+    title: 'Placement preparation for colleges',
+    description:
+      'A dedicated workspace for placement departments to organize student preparation and monitor progress.',
+    features: [
+      'Student and batch management',
+      'Assigned assessments and interviews',
+      'Placement readiness analytics',
+    ],
+  },
+}
+
+function ModulePreview({ module, onAction }) {
+  return (
+    <div className="module-preview page-content">
+      <div className="module-preview-top">
+        <span className="section-kicker">{module.eyebrow}</span>
+        <span className="module-status">
+          <Sparkles size={13} />
+          In development
+        </span>
+      </div>
+
+      <div className="module-preview-content">
+        <div className="module-preview-icon">
+          <Sparkles size={30} />
+        </div>
+
+        <h1>{module.title}</h1>
+        <p>{module.description}</p>
+
+        <div className="module-feature-list">
+          {module.features.map((feature) => (
+            <div key={feature} className="module-feature">
+              <CheckCircle2 size={18} />
+              <span>{feature}</span>
+            </div>
+          ))}
+        </div>
+
+        {module.action && (
+          <button className="primary-btn" onClick={onAction}>
+            {module.action}
+            <ArrowRight size={18} />
+          </button>
+        )}
+      </div>
+
+      <div className="module-preview-footer">
+        <Sparkles size={16} />
+        <span>
+          We're building this experience as part of the Drishya
+          platform roadmap.
+        </span>
+      </div>
+    </div>
+  )
+}
+
+
+
 export default function App() {
   const [signed, setSigned] = useState(
     !!localStorage.getItem('drishya_token')
@@ -1055,6 +1383,9 @@ export default function App() {
   const [page, setPage] = useState('dashboard')
   const [session, setSession] = useState(null)
   const [result, setResult] = useState(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Preserve your existing theme implementation.
   const [theme, setTheme] = useState(
     () => localStorage.getItem('drishya_theme') || 'light'
   )
@@ -1064,37 +1395,171 @@ export default function App() {
     localStorage.setItem('drishya_theme', theme)
   }, [theme])
 
+  function navigate(destination) {
+    setPage(destination)
+    setSidebarOpen(false)
+
+    if (destination !== 'interview') {
+      setSession(null)
+    }
+
+    if (destination !== 'results') {
+      setResult(null)
+    }
+  }
+
   function logout() {
     localStorage.removeItem('drishya_token')
     setSigned(false)
     setPage('dashboard')
     setSession(null)
     setResult(null)
+    setSidebarOpen(false)
   }
 
   if (!signed) {
     return <Auth done={() => setSigned(true)} />
   }
 
-  return (
-    <div className="app-shell">
-      <header className="topbar">
-        <div className="topbar-inner">
-          <button
-            className="brand"
-            onClick={() => {
-              setPage('dashboard')
-              setSession(null)
-              setResult(null)
-            }}
-          >
-            <span className="brand-icon">
-              <BrainCircuit size={20} />
-            </span>
-            <span>Drishya</span>
-          </button>
+  const navigation = [
+    {
+      label: 'WORKSPACE',
+      items: [
+        { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
+        { id: 'nova', label: 'Nova AI Coach', icon: BrainCircuit },
+        { id: 'setup', label: 'Mock Interviews', icon: MessageSquare },
+      ],
+    },
+    {
+      label: 'PREPARATION',
+      items: [
+        { id: 'resume', label: 'Resume Analyzer', icon: FileSearch },
+        { id: 'coding', label: 'Coding Arena', icon: Code2 },
+        { id: 'assessments', label: 'Assessments', icon: Target },
+        { id: 'learning', label: 'Learning Roadmaps', icon: BookOpen },
+      ],
+    },
+    {
+      label: 'CAREER',
+      items: [
+        { id: 'career', label: 'Career Hub', icon: BriefcaseBusiness },
+        {
+          id: 'analytics',
+          label: 'My Performance',
+          icon: ChartNoAxesCombined,
+        },
+      ],
+    },
+    {
+      label: 'INSTITUTIONS',
+      items: [
+        {
+          id: 'institutions',
+          label: 'College Workspace',
+          icon: GraduationCap,
+        },
+      ],
+    },
+  ]
 
-          <nav className="main-nav">
+  const activeLabel =
+    navigation
+      .flatMap((group) => group.items)
+      .find((item) => item.id === page)?.label || 'Drishya'
+
+  return (
+    <div className="app-shell workspace-shell">
+      {sidebarOpen && (
+        <button
+          className="sidebar-backdrop"
+          aria-label="Close navigation"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <aside
+        className={`workspace-sidebar ${sidebarOpen ? 'is-open' : ''}`}
+      >
+        <button
+          className="workspace-brand"
+          onClick={() => navigate('dashboard')}
+        >
+          <span className="brand-icon">
+            <BrainCircuit size={21} />
+          </span>
+
+          <span className="workspace-brand-text">
+            <strong>Drishya</strong>
+            <small>AI CAREER PLATFORM</small>
+          </span>
+        </button>
+
+        <div className="sidebar-user">
+          <div className="sidebar-avatar">
+            <UserRound size={20} />
+          </div>
+          <div>
+            <strong>My Workspace</strong>
+            <span>Student account</span>
+          </div>
+        </div>
+
+        <nav className="sidebar-navigation">
+          {navigation.map((group) => (
+            <div className="sidebar-group" key={group.label}>
+              <span className="sidebar-group-label">
+                {group.label}
+              </span>
+
+              {group.items.map((item) => {
+                const Icon = item.icon
+                const active = page === item.id
+
+                return (
+                  <button
+                    key={item.id}
+                    className={`sidebar-link ${active ? 'active' : ''}`}
+                    onClick={() => navigate(item.id)}
+                  >
+                    <Icon size={18} />
+                    <span>{item.label}</span>
+                    {active && (
+                      <span className="sidebar-active-indicator" />
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          ))}
+        </nav>
+
+        <div className="sidebar-bottom">
+          <button className="sidebar-logout" onClick={logout}>
+            <LogOut size={17} />
+            Sign out
+          </button>
+        </div>
+      </aside>
+
+      <div className="workspace-main">
+        <header className="workspace-header">
+          <div className="workspace-header-left">
+            <button
+              className="mobile-menu-button"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open navigation"
+            >
+              <Menu size={21} />
+            </button>
+
+            <div className="workspace-breadcrumb">
+              <span>Workspace</span>
+              <ChevronRight size={14} />
+              <strong>{activeLabel}</strong>
+            </div>
+          </div>
+
+          <div className="workspace-header-actions">
             <button
               type="button"
               className="theme-toggle"
@@ -1106,72 +1571,64 @@ export default function App() {
               aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
               title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
             >
-              {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
-              <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+              {theme === 'dark' ? (
+                <Sun size={17} />
+              ) : (
+                <Moon size={17} />
+              )}
+              <span>
+                {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+              </span>
             </button>
-            <button
-              className={page === 'dashboard' ? 'nav active' : 'nav'}
-              onClick={() => setPage('dashboard')}
-            >
-              <LayoutDashboard size={16} />
-              Dashboard
-            </button>
+          </div>
+        </header>
 
-            <button
-              className={page === 'setup' ? 'nav active' : 'nav'}
-              onClick={() => {
-                setPage('setup')
-                setSession(null)
+        <main className="workspace-content">
+          {page === 'dashboard' && (
+            <Dashboard
+                start={() => navigate('setup')}
+                navigate={navigate}
+            />
+          )}
+
+          {page === 'setup' && (
+            <Setup
+              onStarted={(newSession) => {
+                setSession(newSession)
+                setPage('interview')
               }}
-            >
-              <MessageSquare size={16} />
-              Interview
-            </button>
+            />
+          )}
 
-            <button onClick={logout} className="nav logout-nav">
-              <LogOut size={16} />
-              Logout
-            </button>
-          </nav>
-        </div>
-      </header>
+          {page === 'interview' && session && (
+            <InterviewRoom
+              session={session}
+              onComplete={(completed) => {
+                setResult(completed)
+                setSession(null)
+                setPage('results')
+              }}
+            />
+          )}
 
-      <main className="app-main">
-        {page === 'dashboard' && (
-          <Dashboard start={() => setPage('setup')} />
-        )}
+          {page === 'results' && result && (
+            <Results
+              result={result}
+              onDashboard={() => navigate('dashboard')}
+              onRetry={() => navigate('setup')}
+            />
+          )}
 
-        {page === 'setup' && (
-          <Setup
-            onStarted={(newSession) => {
-              setSession(newSession)
-              setPage('interview')
-            }}
-          />
-        )}
-
-        {page === 'interview' && session && (
-          <InterviewRoom
-            session={session}
-            onComplete={(completed) => {
-              setResult(completed)
-              setSession(null)
-              setPage('results')
-            }}
-          />
-        )}
-
-        {page === 'results' && result && (
-          <Results
-            result={result}
-            onDashboard={() => setPage('dashboard')}
-            onRetry={() => {
-              setResult(null)
-              setPage('setup')
-            }}
-          />
-        )}
-      </main>
+          {workspaceModules[page] && (
+            <ModulePreview
+              module={workspaceModules[page]}
+              onAction={() => navigate(
+                workspaceModules[page].destination
+              )}
+            />
+          )}
+        </main>
+      </div>
     </div>
   )
 }
