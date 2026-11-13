@@ -1437,46 +1437,47 @@ export default function App() {
     return <Auth done={() => setSigned(true)} />
   }
 
-  const navigation = [
-    {
-      label: 'WORKSPACE',
-      items: [
-        { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
-        { id: 'nova', label: 'Nova AI Coach', icon: BrainCircuit },
-        { id: 'setup', label: 'Mock Interviews', icon: MessageSquare },
-      ],
-    },
-    {
-      label: 'PREPARATION',
-      items: [
-        { id: 'resume', label: 'Resume Analyzer', icon: FileSearch },
-        { id: 'coding', label: 'Coding Arena', icon: Code2 },
-        { id: 'assessments', label: 'Assessments', icon: Target },
-        { id: 'learning', label: 'Learning Roadmaps', icon: BookOpen },
-      ],
-    },
-    {
-      label: 'CAREER',
-      items: [
-        { id: 'career', label: 'Career Hub', icon: BriefcaseBusiness },
-        {
-          id: 'analytics',
-          label: 'My Performance',
-          icon: ChartNoAxesCombined,
-        },
-      ],
-    },
-    {
-      label: 'INSTITUTIONS',
-      items: [
-        {
-          id: 'institutions',
-          label: 'College Workspace',
-          icon: GraduationCap,
-        },
-      ],
-    },
-  ]
+  // const navigation = [
+  //   {
+  //     label: 'WORKSPACE',
+  //     items: [
+  //       { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
+  //       { id: 'nova', label: 'Nova AI Coach', icon: BrainCircuit },
+  //       { id: 'setup', label: 'Mock Interviews', icon: MessageSquare },
+  //     ],
+  //   },
+  //   {
+  //     label: 'PREPARATION',
+  //     items: [
+  //       { id: 'resume', label: 'Resume Analyzer', icon: FileSearch },
+  //       { id: 'coding', label: 'Coding Arena', icon: Code2 },
+  //       { id: 'assessments', label: 'Assessments', icon: Target },
+  //       { id: 'learning', label: 'Learning Roadmaps', icon: BookOpen },
+  //     ],
+  //   },
+  //   {
+  //     label: 'CAREER',
+  //     items: [
+  //       { id: 'career', label: 'Career Hub', icon: BriefcaseBusiness },
+  //       {
+  //         id: 'analytics',
+  //         label: 'My Performance',
+  //         icon: ChartNoAxesCombined,
+  //       },
+  //     ],
+  //   },
+  //   {
+  //     label: 'INSTITUTIONS',
+  //     items: [
+  //       {
+  //         id: 'institutions',
+  //         label: 'College Workspace',
+  //         icon: GraduationCap,
+  //       },
+  //     ],
+  //   },
+  // ]
+
 
   const activeLabel =
     navigation
@@ -1485,125 +1486,31 @@ export default function App() {
 
   return (
     <div className="app-shell workspace-shell">
-      {sidebarOpen && (
-        <button
-          className="sidebar-backdrop"
-          aria-label="Close navigation"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
 
-      <aside
-        className={`workspace-sidebar ${sidebarOpen ? 'is-open' : ''}`}
-      >
-        <button
-          className="workspace-brand"
-          onClick={() => navigate('dashboard')}
-        >
-          <span className="brand-icon">
-            <BrainCircuit size={21} />
-          </span>
-
-          <span className="workspace-brand-text">
-            <strong>Drishya</strong>
-            <small>AI CAREER PLATFORM</small>
-          </span>
-        </button>
-
-        <div className="sidebar-user">
-          <div className="sidebar-avatar">
-            <UserRound size={20} />
-          </div>
-          <div>
-            <strong>My Workspace</strong>
-            <span>Student account</span>
-          </div>
-        </div>
-
-        <nav className="sidebar-navigation">
-          {navigation.map((group) => (
-            <div className="sidebar-group" key={group.label}>
-              <span className="sidebar-group-label">
-                {group.label}
-              </span>
-
-              {group.items.map((item) => {
-                const Icon = item.icon
-                const active = page === item.id
-
-                return (
-                  <button
-                    key={item.id}
-                    className={`sidebar-link ${active ? 'active' : ''}`}
-                    onClick={() => navigate(item.id)}
-                  >
-                    <Icon size={18} />
-                    <span>{item.label}</span>
-                    {active && (
-                      <span className="sidebar-active-indicator" />
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-          ))}
-        </nav>
-
-        <div className="sidebar-bottom">
-          <button className="sidebar-logout" onClick={logout}>
-            <LogOut size={17} />
-            Sign out
-          </button>
-        </div>
-      </aside>
+      <WorkspaceSidebar
+        navigation={navigation}
+        page={page}
+        sidebarOpen={sidebarOpen}
+        navigate={navigate}
+        logout={logout}
+        setSidebarOpen={setSidebarOpen}
+      />
 
       <div className="workspace-main">
-        <header className="workspace-header">
-          <div className="workspace-header-left">
-            <button
-              className="mobile-menu-button"
-              onClick={() => setSidebarOpen(true)}
-              aria-label="Open navigation"
-            >
-              <Menu size={21} />
-            </button>
 
-            <div className="workspace-breadcrumb">
-              <span>Workspace</span>
-              <ChevronRight size={14} />
-              <strong>{activeLabel}</strong>
-            </div>
-          </div>
-
-          <div className="workspace-header-actions">
-            <button
-              type="button"
-              className="theme-toggle"
-              onClick={() =>
-                setTheme((current) =>
-                  current === 'dark' ? 'light' : 'dark'
-                )
-              }
-              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-            >
-              {theme === 'dark' ? (
-                <Sun size={17} />
-              ) : (
-                <Moon size={17} />
-              )}
-              <span>
-                {theme === 'dark' ? 'Light mode' : 'Dark mode'}
-              </span>
-            </button>
-          </div>
-        </header>
+        <WorkspaceHeader
+          activeLabel={activeLabel}
+          theme={theme}
+          setTheme={setTheme}
+          setSidebarOpen={setSidebarOpen}
+        />
 
         <main className="workspace-content">
+
           {page === 'dashboard' && (
             <Dashboard
-                start={() => navigate('setup')}
-                navigate={navigate}
+              start={() => navigate('setup')}
+              navigate={navigate}
             />
           )}
 
@@ -1638,13 +1545,15 @@ export default function App() {
           {workspaceModules[page] && (
             <ModulePreview
               module={workspaceModules[page]}
-              onAction={() => navigate(
-                workspaceModules[page].destination
-              )}
+              onAction={() =>
+                navigate(workspaceModules[page].destination)
+              }
             />
           )}
+
         </main>
       </div>
     </div>
   )
 }
+
