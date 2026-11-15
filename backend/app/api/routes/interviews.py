@@ -65,6 +65,125 @@ def get_recent_candidate_scores(interview: Interview, db: Session) -> list[int]:
     return list(db.scalars(statement))
 
 
+
+def get_candidate_learning_context(
+    interview: Interview,
+    db: Session,
+    limit: int = 8,
+) -> str:
+    """
+    Build a compact learning profile from the candidate's
+    recent answers in matching interview tracks.
+    """
+    statement = (
+        select(
+            Question.question_text,
+            Question.difficulty,
+            Answer.answer_text,
+            Answer.score,
+            Answer.technical_accuracy,
+            Answer.relevance,
+            Answer.completeness,
+            Answer.clarity,
+            Answer.strengths,
+            Answer.weaknesses,
+            Answer.missing_concepts,
+            Answer.improvement_suggestions,
+            Answer.feedback,
+        )
+        .join(Answer, Answer.question_id == Question.id)
+        .join(Interview, Interview.id == Question.interview_id)
+        .where(
+            Interview.user_id == interview.user_id,
+            Interview.type == interview.type,
+            Interview.role == interview.role,
+            Interview.subject == interview.subject,
+        )
+        .order_by(Answer.created_at.desc())
+        .limit(limit)
+    )
+
+    records = list(db.execute(statement).all())
+
+    if not records:
+        return (
+            "No previous evaluated answers are available. "
+            "Use the current interview configuration to assess the candidate."
+        )
+
+    # Reverse so the context reads from oldest to newest.
+    records.reverse()
+
+    lines = [
+        "CANDIDATE LEARNING HISTORY",
+        "The following records are previous evaluated interview responses.",
+    ]
+
+    for index, record in enumerate(records, start=1):
+        lines.extend([
+            f"\nPrevious response {index}:",
+            f"Question: {record.question_text[:700]}",
+            f"Difficulty: {record.difficulty}",
+            f"Candidate answer: {record.answer_text[:1000]}",
+            (
+                "Scores: "
+                f"overall={record.score}/10, "
+                f"accuracy={record.technical_accuracy}/10, "
+                f"relevance={record.relevance}/10, "
+                f"completeness={record.completeness}/10, "
+                f"clarity={record.clarity}/10"
+            ),
+            f"Feedback: {record.feedback[:500]}",
+            f"Strengths: {', '.join(record.strengths or [])}",
+            f"Weaknesses: {', '.join(record.weaknesses or [])}",
+            f"Missing concepts: {', '.join(record.missing_concepts or [])}",
+            (
+                "Improvement suggestions: "
+                f"{', '.join(record.improvement_suggestions or [])}"
+            ),
+        ])
+
+    lines.extend([
+        "",
+        "Use this history to identify recurring weaknesses, "
+        "improvements, and concepts that need further assessment.",
+    ])
+
+    return "\n".join(lines)
+
+
+def get_follow_up_context(
+    question: Question,
+    db: Session,
+) -> str:
+    """
+    Prepare immediate previous-answer evidence for Nova.
+    """
+    answer = db.scalar(
+        select(Answer).where(Answer.question_id == question.id)
+    )
+
+    if answer is None:
+        return ""
+
+    return "\n".join([
+        f"Previous question: {question.question_text[:700]}",
+        f"Previous answer: {answer.answer_text[:1200]}",
+        f"Overall score: {answer.score}/10",
+        f"Technical accuracy: {answer.technical_accuracy}/10",
+        f"Relevance: {answer.relevance}/10",
+        f"Completeness: {answer.completeness}/10",
+        f"Clarity: {answer.clarity}/10",
+        f"Strengths: {', '.join(answer.strengths or [])}",
+        f"Weaknesses: {', '.join(answer.weaknesses or [])}",
+        f"Missing concepts: {', '.join(answer.missing_concepts or [])}",
+        (
+            "Improvement suggestions: "
+            f"{', '.join(answer.improvement_suggestions or [])}"
+        ),
+        f"Evaluator feedback: {answer.feedback[:700]}",
+    ])
+
 @router.post("", response_model=InterviewResponse, status_code=status.HTTP_201_CREATED)
 def create_interview(payload: InterviewCreate, current_user: CurrentUser, db: DbSession) -> Interview:
     interview = Interview(
@@ -108,7 +227,7 @@ def start_interview(interview_id: int, current_user: CurrentUser, db: DbSession)
     try:
         generated = interview_service.question(
             interview, sequence=1, previous_questions=previous_questions,
-            difficulty=target_difficulty,
+            history=get_candidate_learning_context(interview, db),difficulty=target_difficulty,
         )
     except Exception as error:
         logger.exception("Nova question generation failed")
@@ -169,11 +288,18 @@ def next_question(interview_id: int, current_user: CurrentUser, db: DbSession) -
                         questions[-1].difficulty,
                         recent_scores,
                         )
-    history = "Recent answer scores (newest first): " + (", ".join(map(str, recent_scores)) or "not available")
+    history = get_candidate_learning_context(interview, db)
     try:
+
+        follow_up_context = get_follow_up_context(
+                        questions[-1],
+                        db,
+        )
+
         generated = interview_service.question(
             interview, sequence=len(questions) + 1, history=history,
             previous_questions=previous_questions, difficulty=target_difficulty,
+            follow_up_context=follow_up_context,
         )
     except Exception as error:
         logger.exception("Nova question generation failed")

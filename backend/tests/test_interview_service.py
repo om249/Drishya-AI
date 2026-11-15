@@ -138,3 +138,72 @@ def test_question_prompt_uses_normalized_difficulty():
     )
 
     assert "Required difficulty: intermediate" in provider.prompts[0]
+
+
+def test_question_prompt_includes_candidate_learning_context():
+    provider = FakeProvider([
+        "How would you use a Python generator to process a large file?"
+    ])
+
+    service = InterviewService(provider)
+
+    history = """
+    Previous response:
+    Question: Explain Python generators.
+    Score: 4/10
+    Weaknesses: Could not explain lazy evaluation.
+    Missing concepts: yield keyword, iterator protocol.
+    """
+
+    service.question(
+        make_interview(),
+        sequence=3,
+        history=history,
+    )
+
+    prompt = provider.prompts[0]
+
+    assert "Python generators" in prompt
+    assert "lazy evaluation" in prompt
+    assert "iterator protocol" in prompt
+
+def test_question_prompt_includes_follow_up_context():
+    provider = FakeProvider([
+        "How would you use generators to process a large CSV file?"
+    ])
+
+    service = InterviewService(provider)
+
+    follow_up = """
+    Previous question: Explain Python generators.
+    Weaknesses: Could not explain lazy evaluation.
+    Missing concepts: yield keyword and iterator protocol.
+    """
+
+    service.question(
+        make_interview(),
+        sequence=2,
+        follow_up_context=follow_up,
+    )
+
+    prompt = provider.prompts[0]
+
+    assert "FOLLOW-UP QUESTION CONTEXT" in prompt
+    assert "lazy evaluation" in prompt
+    assert "iterator protocol" in prompt
+
+
+def test_question_without_follow_up_context_still_works():
+    provider = FakeProvider([
+        "Explain the difference between a list and a tuple."
+    ])
+
+    service = InterviewService(provider)
+
+    result = service.question(
+        make_interview(),
+        sequence=1,
+    )
+
+    assert result.question_text
+    assert "No immediate follow-up is required." in provider.prompts[0]
