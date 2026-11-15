@@ -16,6 +16,7 @@ from app.schemas.interview import InterviewCreate, InterviewResponse
 from app.schemas.question import QuestionResponse
 from app.services.interview.service import InterviewService
 from app.services.email import send_interview_summary
+from app.schemas import interview
 
 router = APIRouter(prefix="/interviews", tags=["Interviews"])
 DbSession = Annotated[Session, Depends(get_db)]
@@ -102,7 +103,7 @@ def start_interview(interview_id: int, current_user: CurrentUser, db: DbSession)
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Interview has already started")
     previous_questions = get_candidate_question_history(interview, db)
     target_difficulty = interview_service.adaptive_difficulty(
-        interview.difficulty, get_recent_candidate_scores(interview, db)
+    interview.difficulty, get_recent_candidate_scores(interview, db),
     )
     try:
         generated = interview_service.question(
@@ -135,7 +136,12 @@ def submit_answer(interview_id: int, payload: AnswerSubmit, current_user: Curren
     if db.scalar(select(Answer).where(Answer.question_id == question.id)):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Question has already been answered")
     try:
-        evaluation = interview_service.evaluate(interview, question.question_text, payload.answer_text)
+        evaluation = interview_service.evaluate(
+                     interview=interview,
+                     question=question.question_text,
+                     answer=payload.answer_text,
+                     difficulty=question.difficulty,
+                    )
     except Exception as error:
         logger.exception("Nova answer evaluation failed")
         raise HTTPException(
@@ -159,7 +165,10 @@ def next_question(interview_id: int, current_user: CurrentUser, db: DbSession) -
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Answer the current question before continuing")
     previous_questions = get_candidate_question_history(interview, db)
     recent_scores = get_recent_candidate_scores(interview, db)
-    target_difficulty = interview_service.adaptive_difficulty(interview.difficulty, recent_scores)
+    target_difficulty = interview_service.adaptive_difficulty(
+                        questions[-1].difficulty,
+                        recent_scores,
+                        )
     history = "Recent answer scores (newest first): " + (", ".join(map(str, recent_scores)) or "not available")
     try:
         generated = interview_service.question(
