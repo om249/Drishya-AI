@@ -228,7 +228,7 @@ export default function InterviewRoom({ session, onComplete }) {
   )
 }
 
-function Evaluation({ evaluation, busy, onNext, onComplete }) {
+function Evaluation({ evaluation, busy, onNext, onComplete, isLastQuestion, }) {
   const score = evaluation.score
 
   return (
@@ -312,7 +312,7 @@ function Evaluation({ evaluation, busy, onNext, onComplete }) {
           Finish interview
         </button>
 
-        {islastQuestion && (
+        {!isLastQuestion && (
         <button
           disabled={busy}
           onClick={onNext}
