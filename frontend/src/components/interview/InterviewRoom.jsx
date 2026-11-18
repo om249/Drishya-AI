@@ -19,6 +19,12 @@ export default function InterviewRoom({ session, onComplete }) {
   const [error, setError] = useState('')
 
   const questionNumber = question.sequence_number
+  const totalQuestions = session.interview.question_count || 5
+  const isLastQuestion = questionNumber >= totalQuestions
+  const progress = Math.min(
+    (questionNumber / totalQuestions) * 100,
+    100
+  )
 
   async function submitAnswer(e) {
     e.preventDefault()
@@ -97,7 +103,7 @@ export default function InterviewRoom({ session, onComplete }) {
         <div className="interview-meta">
           <span>
             <MessageSquare size={16} />
-            Question {questionNumber}
+            Question {questionNumber} of {totalQuestions}
           </span>
 
           <span>
@@ -148,6 +154,21 @@ export default function InterviewRoom({ session, onComplete }) {
 
         <main className="question-area">
           <div className="question-card">
+            <div className="question-progress">
+              <div className="question-progress-info">
+                <span>Interview progress</span>
+                <strong>
+                  {questionNumber}/{totalQuestions}
+                </strong>
+              </div>
+
+              <div className="question-progress-track">
+                <div
+                  className="question-progress-fill"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
             <div className="question-label">
               <span>
                 QUESTION {String(questionNumber).padStart(2, '0')}
@@ -195,6 +216,7 @@ export default function InterviewRoom({ session, onComplete }) {
                 busy={busy}
                 onNext={nextQuestion}
                 onComplete={completeInterview}
+                isLastQuestion={isLastQuestion}
               />
             )}
           </div>
@@ -290,6 +312,7 @@ function Evaluation({ evaluation, busy, onNext, onComplete }) {
           Finish interview
         </button>
 
+        {islastQuestion && (
         <button
           disabled={busy}
           onClick={onNext}
@@ -298,6 +321,7 @@ function Evaluation({ evaluation, busy, onNext, onComplete }) {
           Next question
           <ArrowRight size={18} />
         </button>
+        )}
       </div>
     </div>
   )

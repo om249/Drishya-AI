@@ -1,5 +1,15 @@
+
 import { useState } from 'react'
-import { ArrowRight, BrainCircuit, Play, Sparkles } from 'lucide-react'
+import {
+  ArrowRight,
+  BrainCircuit,
+  Play,
+  Sparkles,
+  Building2,
+  Target,
+  BriefcaseBusiness,
+  ListChecks,
+} from 'lucide-react'
 
 import { api } from '../../services/api'
 import { Field } from '../common/FormFields'
@@ -24,6 +34,10 @@ export default function Setup({ onStarted }) {
           role: form.get('role'),
           subject: form.get('subject'),
           difficulty: form.get('difficulty'),
+          experience_level: form.get('experience_level'),
+          target_company: form.get('target_company'),
+          focus_areas: form.get('focus_areas'),
+          question_count: Number(form.get('question_count')),
         }),
       })
 
@@ -65,8 +79,8 @@ export default function Setup({ onStarted }) {
         </h1>
 
         <p>
-          Choose your interview settings and Nova will build a
-          personalized session around them.
+          Customize your experience and let Nova create an interview
+          around your career goals.
         </p>
       </div>
 
@@ -106,6 +120,79 @@ export default function Setup({ onStarted }) {
               <option value="advanced">Advanced</option>
             </select>
           </label>
+
+          <label className="field-label">
+            <span className="setup-field-heading">
+              <BriefcaseBusiness size={16} />
+              Experience level
+            </span>
+
+            <select
+              name="experience_level"
+              className="field-input"
+              defaultValue="fresher"
+            >
+              <option value="fresher">Fresher / Student</option>
+              <option value="0-1 years">0–1 year</option>
+              <option value="1-3 years">1–3 years</option>
+              <option value="3+ years">3+ years</option>
+            </select>
+          </label>
+
+          <label className="field-label">
+            <span className="setup-field-heading">
+              <Building2 size={16} />
+              Target company
+              <span className="optional-label">Optional</span>
+            </span>
+
+            <input
+              type="text"
+              name="target_company"
+              className="field-input"
+              placeholder="e.g. Google, TCS, Infosys"
+              maxLength={120}
+            />
+          </label>
+
+          <label className="field-label setup-full-width">
+            <span className="setup-field-heading">
+              <Target size={16} />
+              Focus areas
+              <span className="optional-label">Optional</span>
+            </span>
+
+            <textarea
+              name="focus_areas"
+              className="field-input setup-textarea"
+              placeholder="e.g. Python OOP, SQL joins, REST APIs, data structures"
+              rows={3}
+              maxLength={500}
+            />
+
+            <span className="field-hint">
+              Separate topics with commas. Nova will prioritize these areas.
+            </span>
+          </label>
+
+          <label className="field-label">
+            <span className="setup-field-heading">
+              <ListChecks size={16} />
+              Number of questions
+            </span>
+
+            <select
+              name="question_count"
+              className="field-input"
+              defaultValue="5"
+            >
+              <option value="3">3 Questions — Quick practice</option>
+              <option value="5">5 Questions — Standard</option>
+              <option value="7">7 Questions — Detailed</option>
+              <option value="10">10 Questions — Extended</option>
+              <option value="15">15 Questions — Full practice</option>
+            </select>
+          </label>
         </div>
 
         <div className="interview-preview">
@@ -114,10 +201,11 @@ export default function Setup({ onStarted }) {
           </div>
 
           <div>
-            <strong>Nova will evaluate your answers</strong>
+            <strong>Nova will personalize your interview</strong>
             <p>
-              Every response is analyzed for accuracy, relevance,
-              completeness, clarity, and improvement areas.
+              Questions adapt to your experience, target role, focus
+              areas, and performance. Every answer receives structured
+              evaluation and improvement feedback.
             </p>
           </div>
         </div>
