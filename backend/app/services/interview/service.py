@@ -143,6 +143,14 @@ Interview type: {interview.type}
 Subject/domain: {interview.subject}
 Required difficulty: {selected_difficulty}
 Question number: {sequence}
+Total planned questions: {getattr(interview, "question_count", 5)}
+
+EXPERIENCE PROFILE
+Experience level: {getattr(interview, "experience_level", "fresher")}
+Target company: {getattr(interview, "target_company", None) or "Not specified"}
+
+CANDIDATE FOCUS AREAS
+{getattr(interview, "focus_areas", None) or "No additional focus areas specified."}
 
 INTERVIEW GUIDANCE
 {guidance}
@@ -195,6 +203,17 @@ QUESTION GENERATION RULES
 6. Do not include the answer, hints, or explanation.
 7. Do not ask multiple questions in one response.
 8. Return only the fields required by the response schema.
+9. Adjust expected knowledge and practical depth according to the
+   candidate's experience level.
+10. When a target company is specified, consider its general role-related
+    interview expectations. Do not claim knowledge of private company
+    interview questions or internal hiring processes.
+11. Prioritize the candidate's selected focus areas while maintaining
+    relevance to the interview type, role, and subject.
+12. Distribute topics sensibly across the planned question count.
+13. Do not ask all questions from one focus area unless the session
+    explicitly requires it.
+14. Do not disclose or fabricate company-specific interview information.
 
 The question must be appropriate for a real placement interview.
 """

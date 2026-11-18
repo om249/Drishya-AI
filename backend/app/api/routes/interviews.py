@@ -184,18 +184,32 @@ def get_follow_up_context(
         f"Evaluator feedback: {answer.feedback[:700]}",
     ])
 
-@router.post("", response_model=InterviewResponse, status_code=status.HTTP_201_CREATED)
-def create_interview(payload: InterviewCreate, current_user: CurrentUser, db: DbSession) -> Interview:
+@router.post(
+    "",
+    response_model=InterviewResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_interview(
+    payload: InterviewCreate,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> Interview:
     interview = Interview(
         user_id=current_user.id,
         type=payload.type,
-        role=payload.role.strip(),
-        subject=payload.subject.strip(),
+        role=payload.role,
+        subject=payload.subject,
         difficulty=payload.difficulty,
+        experience_level=payload.experience_level,
+        target_company=payload.target_company,
+        focus_areas=payload.focus_areas,
+        question_count=payload.question_count,
     )
+
     db.add(interview)
     db.commit()
     db.refresh(interview)
+
     return interview
 
 
@@ -281,7 +295,15 @@ def next_question(interview_id: int, current_user: CurrentUser, db: DbSession) -
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Interview is not in progress")
     questions = list(db.scalars(select(Question).where(Question.interview_id == interview.id).order_by(Question.sequence_number)))
     if not questions or db.scalar(select(Answer).where(Answer.question_id == questions[-1].id)) is None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Answer the current question before continuing")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Answer the current question before continuing"
+        )
+    if len(questions) >= interview.question_count:
+        raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="The selected interview question limit has been reached. Complete the interview.",
+    )
     previous_questions = get_candidate_question_history(interview, db)
     recent_scores = get_recent_candidate_scores(interview, db)
     target_difficulty = interview_service.adaptive_difficulty(
