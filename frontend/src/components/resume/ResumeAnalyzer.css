@@ -420,3 +420,216 @@
     padding: 8px;
   }
 }
+
+
+/* Resume AI Analysis */
+
+.resume-analyze-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 13px;
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  border-radius: 10px;
+  background: rgba(109, 40, 217, 0.12);
+  color: #a78bfa;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.resume-analyze-btn:hover:not(:disabled) {
+  background: rgba(109, 40, 217, 0.24);
+  border-color: #8b5cf6;
+  transform: translateY(-1px);
+}
+
+.resume-analyze-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.resume-analysis-section {
+  margin-top: 30px;
+  animation: resumeFadeIn 0.35s ease;
+}
+
+.resume-analysis-section > .resume-section-heading {
+  margin-bottom: 18px;
+}
+
+.resume-analysis-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px;
+  margin-bottom: 18px;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  border-radius: 14px;
+  color: #a78bfa;
+  background: rgba(109, 40, 217, 0.08);
+}
+
+.analysis-profile-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 24px;
+  margin-bottom: 18px;
+  border: 1px solid var(--border-color, rgba(148, 163, 184, 0.18));
+  border-radius: 16px;
+  background: var(--card-bg, rgba(30, 30, 45, 0.55));
+}
+
+.analysis-profile-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  color: #c4b5fd;
+  background: rgba(109, 40, 217, 0.2);
+}
+
+.analysis-profile-card h3 {
+  margin: 0 0 9px;
+  font-size: 20px;
+}
+
+.analysis-profile-card p {
+  margin: 0;
+  line-height: 1.7;
+  color: var(--text-secondary, #a1a1aa);
+}
+
+.analysis-contact-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px 18px;
+  margin-top: 14px;
+  color: #a78bfa;
+  font-size: 13px;
+}
+
+.analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.analysis-card {
+  min-width: 0;
+  padding: 21px;
+  border: 1px solid var(--border-color, rgba(148, 163, 184, 0.18));
+  border-radius: 15px;
+  background: var(--card-bg, rgba(30, 30, 45, 0.55));
+}
+
+.analysis-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 17px;
+  color: #a78bfa;
+}
+
+.analysis-card-heading h3 {
+  margin: 0;
+  color: var(--text-primary, #f4f4f5);
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.analysis-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.analysis-tags span {
+  padding: 7px 11px;
+  border: 1px solid rgba(139, 92, 246, 0.22);
+  border-radius: 8px;
+  background: rgba(109, 40, 217, 0.1);
+  color: #c4b5fd;
+  font-size: 12px;
+}
+
+.analysis-entry {
+  padding: 13px 0;
+  border-top: 1px solid var(--border-color, rgba(148, 163, 184, 0.13));
+}
+
+.analysis-entry:first-of-type {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.analysis-entry h4 {
+  margin: 0 0 6px;
+  color: var(--text-primary, #f4f4f5);
+  font-size: 14px;
+}
+
+.analysis-entry p {
+  margin: 4px 0;
+  color: var(--text-secondary, #a1a1aa);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.analysis-entry > span {
+  display: inline-block;
+  margin-top: 5px;
+  color: #a78bfa;
+  font-size: 12px;
+}
+
+.analysis-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 19px;
+  color: var(--text-secondary, #c4c4cc);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.analysis-list li::marker {
+  color: #a78bfa;
+}
+
+.analysis-empty-text {
+  margin: 0;
+  color: var(--text-secondary, #a1a1aa);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+@keyframes resumeFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 760px) {
+  .analysis-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .analysis-profile-card {
+    padding: 18px;
+  }
+
+  .resume-analyze-btn {
+    padding: 8px 10px;
+  }
+}

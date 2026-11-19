@@ -10,10 +10,17 @@ import {
   Eye,
   X,
   RefreshCw,
+  RotateCw,
   CheckCircle2,
   AlertCircle,
   Sparkles,
   FileSearch,
+  Brain,
+  GraduationCap,
+  BriefcaseBusiness,
+  Code2,
+  Award,
+  Lightbulb,
 } from 'lucide-react'
 
 import './ResumeAnalyzer.css'
@@ -55,6 +62,12 @@ function ResumeAnalyzer() {
   const [previewUrl, setPreviewUrl] = useState('')
   const [previewLoading, setPreviewLoading] = useState(false)
   const docxContainerRef = useRef(null)
+
+  const [analysis, setAnalysis] = useState(null)
+  const [analyzingId, setAnalyzingId] = useState(null)
+  const [analysisError, setAnalysisError] = useState('')
+  const [analysisResume, setAnalysisResume] = useState(null)
+
 
   const loadResumes = useCallback(async () => {
     setLoading(true)
@@ -149,89 +162,138 @@ function ResumeAnalyzer() {
     if (file) handleUpload(file)
   }
 
- const openResume = async (resume) => {
-  setError('')
-  setSuccess('')
-  setPreviewLoading(true)
+  const openResume = async (resume) => {
+    setError('')
+    setSuccess('')
+    setPreviewLoading(true)
 
-  try {
-    const token = localStorage.getItem('drishya_token')
-
-    const response = await fetch(
-      `${API_BASE_URL}/resumes/${resume.id}/file`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    )
-
-    if (!response.ok) {
-      throw new Error('Could not load the original resume.')
-    }
-
-    const blob = await response.blob()
-    const url = URL.createObjectURL(blob)
-
-    setPreviewUrl((previous) => {
-      if (previous) URL.revokeObjectURL(previous)
-      return url
-    })
-
-    setSelectedResume(resume)
-  } catch (err) {
-    setError(err.message || 'Could not open this resume.')
-  } finally {
-    setPreviewLoading(false)
-  }
-}
-
-useEffect(() => {
-  if (
-    !selectedResume ||
-    selectedResume.file_type !== 'docx' ||
-    !previewUrl ||
-    !docxContainerRef.current
-  ) {
-    return
-  }
-
-  let cancelled = false
-
-  const renderDocument = async () => {
     try {
-      const response = await fetch(previewUrl)
-      const blob = await response.blob()
+      const token = localStorage.getItem('drishya_token')
 
-      if (!cancelled && docxContainerRef.current) {
-        await renderAsync(blob, docxContainerRef.current, null, {
-          className: 'docx-preview-document',
-          inWrapper: true,
-          ignoreWidth: false,
-          ignoreHeight: false,
-          breakPages: true,
-        })
+      const response = await fetch(
+        `${API_BASE_URL}/resumes/${resume.id}/file`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error('Could not load the original resume.')
       }
-    } catch {
-      if (!cancelled) {
-        setError('Could not render this Word document.')
-      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+
+      setPreviewUrl((previous) => {
+        if (previous) URL.revokeObjectURL(previous)
+        return url
+      })
+
+      setSelectedResume(resume)
+    } catch (err) {
+      setError(err.message || 'Could not open this resume.')
+    } finally {
+      setPreviewLoading(false)
     }
   }
 
-  renderDocument()
 
-  return () => {
-    cancelled = true
+  const handleAnalyze = async (resume, forceRefresh = false) => {
+    setAnalyzingId(resume.id)
+    setAnalysisError('')
+    if (!forceRefresh || analysisResume?.id !== resume.id) {
+      setAnalysis(null)
+    }
+    setAnalysisResume(resume)
+
+    try {
+      const result = await api(`/resumes/${resume.id}/analyze`, {
+        method: 'POST',
+        body: JSON.stringify({
+          force_refresh: forceRefresh,
+        }),
+      })
+
+      setAnalysis(result.analysis)
+      setSuccess(
+        forceRefresh
+          ? 'Resume analysis refreshed successfully.'
+          : 'Resume analysis completed successfully.'
+      )
+    } catch (err) {
+      setAnalysisError(
+        err.message || 'Could not analyze this resume. Please try again.'
+      )
+    } finally {
+      setAnalyzingId(null)
+    }
   }
-}, [selectedResume, previewUrl])
 
+  const renderAnalysisList = (items, emptyText = 'No information found.') => {
+    if (!items?.length) {
+      return <p className="analysis-empty-text">{emptyText}</p>
+    }
 
-useEffect(() => {
-  return () => {
-    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    return (
+      <ul className="analysis-list">
+        {items.map((item, index) => (
+          <li key={`${index}-${typeof item === 'string' ? item : item.name || item.degree || ''}`}>
+            {typeof item === 'string' ? item : item.name || item.degree || ''}
+          </li>
+        ))}
+      </ul>
+    )
   }
-}, [previewUrl])
+
+
+  useEffect(() => {
+    if (
+      !selectedResume ||
+      selectedResume.file_type !== 'docx' ||
+      !previewUrl ||
+      !docxContainerRef.current
+    ) {
+      return
+    }
+
+    let cancelled = false
+
+    const renderDocument = async () => {
+      try {
+        const response = await fetch(previewUrl)
+        const blob = await response.blob()
+
+        if (!cancelled && docxContainerRef.current) {
+          await renderAsync(blob, docxContainerRef.current, null, {
+            className: 'docx-preview-document',
+            inWrapper: true,
+            ignoreWidth: false,
+            ignoreHeight: false,
+            breakPages: true,
+          })
+        }
+      } catch {
+        if (!cancelled) {
+          setError('Could not render this Word document.')
+        }
+      }
+    }
+
+    renderDocument()
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedResume, previewUrl])
+
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl)
+    }
+  }, [previewUrl])
 
   const deleteResume = async (resume) => {
     const confirmed = window.confirm(
@@ -418,6 +480,24 @@ useEffect(() => {
                     <Eye size={18} />
                   </button>
 
+
+                  <button
+                    className="resume-analyze-btn"
+                    onClick={() => handleAnalyze(resume)}
+                    disabled={analyzingId === resume.id}
+                    title="Analyze resume with AI"
+                  >
+                    {analyzingId === resume.id ? (
+                      <RefreshCw size={17} className="resume-spin" />
+                    ) : (
+                      <Sparkles size={17} />
+                    )}
+                    <span>
+                      {analyzingId === resume.id ? 'Analyzing...' : 'Analyze'}
+                    </span>
+                  </button>
+
+
                   <button
                     className="delete"
                     onClick={() => deleteResume(resume)}
@@ -433,72 +513,211 @@ useEffect(() => {
         )}
       </section>
 
-      {selectedResume && (
-  <div
-    className="resume-modal-backdrop"
-    onClick={() => {
-      setSelectedResume(null)
-      setPreviewUrl((previous) => {
-        if (previous) URL.revokeObjectURL(previous)
-        return ''
-      })
-    }}
-  >
-    <section
-      className="resume-modal resume-document-modal"
-      role="dialog"
-      aria-modal="true"
-      onClick={(event) => event.stopPropagation()}
-    >
-      <div className="resume-modal-header">
-        <div>
-          <span className="section-kicker">
-            RESUME PREVIEW
-          </span>
-          <h2>{selectedResume.filename}</h2>
+
+      {analysisError && (
+        <div className="resume-alert error">
+          <AlertCircle size={18} />
+          <span>{analysisError}</span>
+          <button
+            onClick={() => setAnalysisError('')}
+            aria-label="Dismiss analysis error"
+          >
+            <X size={16} />
+          </button>
         </div>
+      )}
 
-        <button
-          onClick={() => {
-            setSelectedResume(null)
-            setPreviewUrl((previous) => {
-              if (previous) URL.revokeObjectURL(previous)
-              return ''
-            })
-          }}
-          aria-label="Close preview"
-        >
-          <X size={20} />
-        </button>
-      </div>
+      {analyzingId !== null && !analysis && (
+        <div className="resume-analysis-loading">
+          <RefreshCw size={22} className="resume-spin" />
+          <span>Nova is analyzing your resume. This may take a moment...</span>
+        </div>
+      )}
 
-      <div className="resume-document-container">
-        {previewLoading ? (
-          <div className="resume-empty-state">
-            <RefreshCw className="resume-spin" size={25} />
-            <p>Loading original document...</p>
+      {analysis && (
+        <section className="resume-analysis-section">
+          <div className="resume-section-heading">
+            <div>
+              <span className="section-kicker">NOVA AI INSIGHTS</span>
+              <h2>Resume Analysis</h2>
+              <p>
+                AI-powered insights from {analysisResume?.filename}.
+              </p>
+            </div>
+
+            <button
+              className="resume-refresh-btn"
+              onClick={() => handleAnalyze(analysisResume, true)}
+              disabled={analyzingId !== null}
+              title="Generate a fresh analysis"
+            >
+              <RotateCw
+                size={17}
+                className={analyzingId ? 'resume-spin' : ''}
+              />
+              Re-analyze
+            </button>
           </div>
-        ) : selectedResume.file_type === 'pdf' ? (
-          <iframe
-            src={previewUrl}
-            title={selectedResume.filename}
-            className="resume-pdf-frame"
-          />
-        ) : (
-          <div
-            ref={docxContainerRef}
-            className="resume-docx-frame"
-          />
-        )}
-      </div>
 
-      <div className="resume-modal-footer">
-        <span>
-          Original document · {selectedResume.file_type.toUpperCase()}
-        </span>
+          <div className="analysis-profile-card">
+            <div className="analysis-profile-icon">
+              <Brain size={25} />
+            </div>
 
-        <button
-          className="resume-primary-btn"
+            <div>
+              <h3>
+                {analysis.contact?.name || 'Candidate Profile'}
+              </h3>
+              <p>{analysis.professional_summary || 'No professional summary found in the resume.'}</p>
+
+              <div className="analysis-contact-details">
+                {analysis.contact?.email && (
+                  <span>{analysis.contact.email}</span>
+                )}
+                {analysis.contact?.phone && (
+                  <span>{analysis.contact.phone}</span>
+                )}
+                {analysis.contact?.location && (
+                  <span>{analysis.contact.location}</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="analysis-grid">
+            <article className="analysis-card">
+              <div className="analysis-card-heading">
+                <Code2 size={19} />
+                <h3>Technical Skills</h3>
+              </div>
+              <div className="analysis-tags">
+                {analysis.technical_skills?.length ? (
+                  analysis.technical_skills.map((skill, index) => (
+                    <span key={`${skill}-${index}`}>{skill}</span>
+                  ))
+                ) : (
+                  <p className="analysis-empty-text">No technical skills found.</p>
+                )}
+              </div>
+            </article>
+
+            <article className="analysis-card">
+              <div className="analysis-card-heading">
+                <Brain size={19} />
+                <h3>Soft Skills</h3>
+              </div>
+              <div className="analysis-tags">
+                {analysis.soft_skills?.length ? (
+                  analysis.soft_skills.map((skill, index) => (
+                    <span key={`${skill}-${index}`}>{skill}</span>
+                  ))
+                ) : (
+                  <p className="analysis-empty-text">No soft skills found.</p>
+                )}
+              </div>
+            </article>
+
+            <article className="analysis-card">
+              <div className="analysis-card-heading">
+                <GraduationCap size={19} />
+                <h3>Education</h3>
+              </div>
+              {analysis.education?.length ? (
+                analysis.education.map((item, index) => (
+                  <div className="analysis-entry" key={index}>
+                    <h4>{item.degree || 'Degree not specified'}</h4>
+                    <p>{item.institution || 'Institution not specified'}</p>
+                    {item.graduation_year && <span>{item.graduation_year}</span>}
+                    {item.details && <p>{item.details}</p>}
+                  </div>
+                ))
+              ) : (
+                <p className="analysis-empty-text">No education details found.</p>
+              )}
+            </article>
+
+            <article className="analysis-card">
+              <div className="analysis-card-heading">
+                <BriefcaseBusiness size={19} />
+                <h3>Experience</h3>
+              </div>
+              {analysis.experience?.length ? (
+                analysis.experience.map((item, index) => (
+                  <div className="analysis-entry" key={index}>
+                    <h4>{item.role || 'Role not specified'}</h4>
+                    <p>{item.company || 'Company not specified'}</p>
+                    {item.duration && <span>{item.duration}</span>}
+                    {renderAnalysisList(item.responsibilities)}
+                  </div>
+                ))
+              ) : (
+                <p className="analysis-empty-text">No experience details found.</p>
+              )}
+            </article>
+
+            <article className="analysis-card">
+              <div className="analysis-card-heading">
+                <Code2 size={19} />
+                <h3>Projects</h3>
+              </div>
+              {analysis.projects?.length ? (
+                analysis.projects.map((item, index) => (
+                  <div className="analysis-entry" key={index}>
+                    <h4>{item.name || 'Project'}</h4>
+                    {item.description && <p>{item.description}</p>}
+                    <div className="analysis-tags">
+                      {item.technologies?.map((tech, techIndex) => (
+                        <span key={`${tech}-${techIndex}`}>{tech}</span>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="analysis-empty-text">No projects found.</p>
+              )}
+            </article>
+
+            <article className="analysis-card">
+              <div className="analysis-card-heading">
+                <Award size={19} />
+                <h3>Certifications</h3>
+              </div>
+              {analysis.certifications?.length ? (
+                analysis.certifications.map((item, index) => (
+                  <div className="analysis-entry" key={index}>
+                    <h4>{item.name || 'Certification'}</h4>
+                    {item.issuer && <p>{item.issuer}</p>}
+                    {item.year && <span>{item.year}</span>}
+                  </div>
+                ))
+              ) : (
+                <p className="analysis-empty-text">No certifications found.</p>
+              )}
+            </article>
+
+            <article className="analysis-card">
+              <div className="analysis-card-heading">
+                <CheckCircle2 size={19} />
+                <h3>Strengths</h3>
+              </div>
+              {renderAnalysisList(analysis.strengths)}
+            </article>
+
+            <article className="analysis-card">
+              <div className="analysis-card-heading">
+                <Lightbulb size={19} />
+                <h3>Improvement Suggestions</h3>
+              </div>
+              {renderAnalysisList(analysis.improvement_suggestions)}
+            </article>
+          </div>
+        </section>
+      )}
+
+
+      {selectedResume && (
+        <div
+          className="resume-modal-backdrop"
           onClick={() => {
             setSelectedResume(null)
             setPreviewUrl((previous) => {
@@ -507,12 +726,75 @@ useEffect(() => {
             })
           }}
         >
-          Close Preview
-        </button>
-      </div>
-    </section>
-  </div>
-)}
+          <section
+            className="resume-modal resume-document-modal"
+            role="dialog"
+            aria-modal="true"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="resume-modal-header">
+              <div>
+                <span className="section-kicker">
+                  RESUME PREVIEW
+                </span>
+                <h2>{selectedResume.filename}</h2>
+              </div>
+
+              <button
+                onClick={() => {
+                  setSelectedResume(null)
+                  setPreviewUrl((previous) => {
+                    if (previous) URL.revokeObjectURL(previous)
+                    return ''
+                  })
+                }}
+                aria-label="Close preview"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="resume-document-container">
+              {previewLoading ? (
+                <div className="resume-empty-state">
+                  <RefreshCw className="resume-spin" size={25} />
+                  <p>Loading original document...</p>
+                </div>
+              ) : selectedResume.file_type === 'pdf' ? (
+                <iframe
+                  src={previewUrl}
+                  title={selectedResume.filename}
+                  className="resume-pdf-frame"
+                />
+              ) : (
+                <div
+                  ref={docxContainerRef}
+                  className="resume-docx-frame"
+                />
+              )}
+            </div>
+
+            <div className="resume-modal-footer">
+              <span>
+                Original document · {selectedResume.file_type.toUpperCase()}
+              </span>
+
+              <button
+                className="resume-primary-btn"
+                onClick={() => {
+                  setSelectedResume(null)
+                  setPreviewUrl((previous) => {
+                    if (previous) URL.revokeObjectURL(previous)
+                    return ''
+                  })
+                }}
+              >
+                Close Preview
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   )
 }
