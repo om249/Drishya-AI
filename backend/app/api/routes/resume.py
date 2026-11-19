@@ -23,6 +23,19 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from typing import Annotated
 
+
+from datetime import datetime, timezone
+
+from fastapi import Body
+
+from app.schemas.resume_analysis import (
+    ResumeAnalysis,
+    ResumeAnalysisResponse,
+    ResumeAnalyzeRequest,
+)
+from app.services.resume.analyzer import ResumeAnalyzer
+
+
 from app.api.dependencies import CurrentUser
 from app.database.connection import get_db
 from app.models.resume import ResumeProfile
@@ -222,41 +235,6 @@ async def upload_resume(
         resume=response,
     )
 
-
-    resume = ResumeProfile(
-        user_id=current_user.id,
-        filename=filename[:255],
-        file_type=ALLOWED_EXTENSIONS[extension],
-        extracted_text=extracted_text,
-    )
-
-    try:
-        db.add(resume)
-        db.commit()
-        db.refresh(resume)
-
-    except Exception as error:
-        db.rollback()
-        logger.exception("Resume database save failed")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Could not save the resume.",
-        ) from error
-
-    response = ResumeResponse(
-        id=resume.id,
-        filename=resume.filename,
-        file_type=resume.file_type,
-        character_count=len(resume.extracted_text),
-        created_at=resume.created_at,
-    )
-
-    return ResumeUploadResponse(
-        message="Resume uploaded and text extracted successfully.",
-        resume=response,
-    )
-
-
 @router.get(
     "",
     response_model=list[ResumeResponse],
@@ -398,3 +376,137 @@ def get_resume_file(
         filename=resume.filename,
         content_disposition_type="inline",
     )
+
+
+
+@router.post(
+    "/{resume_id}/analyze",
+    response_model=ResumeAnalysisResponse,
+)
+def analyze_resume(
+    resume_id: int,
+    current_user: CurrentUser,
+    db: DbSession,
+    request: ResumeAnalyzeRequest = Body(
+        default=ResumeAnalyzeRequest()
+    ),
+):
+    resume = db.scalar(
+        select(ResumeProfile).where(
+            ResumeProfile.id == resume_id,
+            ResumeProfile.user_id == current_user.id,
+        )
+    )
+
+    if resume is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Resume not found.",
+        )
+
+    # Return saved analysis unless a refresh is requested.
+    if resume.analysis_json and not request.force_refresh:
+        try:
+            saved_analysis = ResumeAnalysis.model_validate(
+                resume.analysis_json
+            )
+
+            return ResumeAnalysisResponse(
+                resume_id=resume.id,
+                filename=resume.filename,
+                analysis=saved_analysis,
+                analyzed_at=resume.analyzed_at,
+            )
+        except Exception:
+            logger.warning(
+                "Saved resume analysis is invalid. Re-analyzing resume %s.",
+                resume.id,
+            )
+
+    try:
+        analyzer = ResumeAnalyzer()
+
+        analysis = analyzer.analyze(
+            resume.extracted_text
+        )
+
+        resume.analysis_json = analysis.model_dump()
+        resume.analyzed_at = datetime.now(timezone.utc)
+
+        db.commit()
+        db.refresh(resume)
+
+        return ResumeAnalysisResponse(
+            resume_id=resume.id,
+            filename=resume.filename,
+            analysis=analysis,
+            analyzed_at=resume.analyzed_at,
+        )
+
+    except Exception as error:
+        db.rollback()
+
+        logger.exception(
+            "AI resume analysis failed for resume ID %s",
+            resume_id,
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Resume analysis is temporarily unavailable. "
+                "Please try again later."
+            ),
+        ) from error
+
+
+@router.get(
+    "/{resume_id}/analysis",
+    response_model=ResumeAnalysisResponse,
+)
+def get_resume_analysis(
+    resume_id: int,
+    current_user: CurrentUser,
+    db: DbSession,
+):
+    resume = db.scalar(
+        select(ResumeProfile).where(
+            ResumeProfile.id == resume_id,
+            ResumeProfile.user_id == current_user.id,
+        )
+    )
+
+    if resume is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Resume not found.",
+        )
+
+    if not resume.analysis_json or not resume.analyzed_at:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This resume has not been analyzed yet.",
+        )
+
+    try:
+        analysis = ResumeAnalysis.model_validate(
+            resume.analysis_json
+        )
+
+        return ResumeAnalysisResponse(
+            resume_id=resume.id,
+            filename=resume.filename,
+            analysis=analysis,
+            analyzed_at=resume.analyzed_at,
+        )
+
+    except Exception as error:
+        logger.exception(
+            "Could not load saved analysis for resume ID %s",
+            resume_id,
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not load the saved resume analysis.",
+        ) from error

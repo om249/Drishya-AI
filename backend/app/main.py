@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import auth, dashboard, interviews, users, resume
 
 
+
 app = FastAPI(title="Drishya API", version="0.1.0")
 
 frontend_origins = [

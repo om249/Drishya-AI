@@ -1,7 +1,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, String, Text, func, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
@@ -55,5 +55,17 @@ class ResumeProfile(Base):
     user: Mapped["User"] = relationship(
         back_populates="resumes"
     )
+
+
+    analysis_json: Mapped[dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+    )
+
+    analyzed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
 
     
