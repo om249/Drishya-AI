@@ -5,6 +5,7 @@ import InterviewRoom from '../interview/InterviewRoom'
 import Results from '../interview/Results'
 import ModulePreview from './ModulePreview'
 import { workspaceModules } from '../../data/workspaceModules'
+import ResumeAnalyzer from '../resume/ResumeAnalyzer'
 
 function WorkspaceContent({
   page,
@@ -53,7 +54,7 @@ function WorkspaceContent({
         />
       )}
 
-      {workspaceModules[page] && (
+      {workspaceModules[page] && page !== 'resume' && (
         <ModulePreview
           module={workspaceModules[page]}
           onAction={() =>
@@ -61,6 +62,8 @@ function WorkspaceContent({
           }
         />
       )}
+
+      {page === 'resume' && <ResumeAnalyzer />}
 
     </main>
   )
