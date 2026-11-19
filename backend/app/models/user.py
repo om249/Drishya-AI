@@ -4,7 +4,7 @@ from sqlalchemy import DateTime, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
-
+from app.models.resume import ResumeProfile
 
 class User(Base):
     __tablename__ = "users"
@@ -17,3 +17,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
     interviews: Mapped[list["Interview"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    resumes: Mapped[list["ResumeProfile"]] = relationship(
+    back_populates="user",
+    cascade="all, delete-orphan",
+    )
