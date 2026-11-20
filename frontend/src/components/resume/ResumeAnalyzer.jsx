@@ -77,6 +77,11 @@ function ResumeAnalyzer() {
   const [editingJobId, setEditingJobId] = useState(null)
   const [savingJob, setSavingJob] = useState(false)
 
+  const [matchingJobId, setMatchingJobId] = useState(null)
+  const [matchResumeIds, setMatchResumeIds] = useState({})
+  const [matchReport, setMatchReport] = useState(null)
+  const [matchError, setMatchError] = useState('')
+
   const [jobForm, setJobForm] = useState({
     title: '',
     company: '',
@@ -444,6 +449,42 @@ function ResumeAnalyzer() {
     }
   }
 
+  const handleResumeMatch = async (job) => {
+    const resumeId = matchResumeIds[job.id] || job.resume_id
+
+    if (!resumeId) {
+      setError('Please select a resume before matching.')
+      return
+    }
+
+    setMatchingJobId(job.id)
+    setMatchError('')
+    setMatchReport(null)
+    setError('')
+
+    try {
+      const result = await api(
+        `/job-descriptions/${job.id}/match`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            resume_id: Number(resumeId),
+            force_refresh: true,
+          }),
+        }
+      )
+
+      setMatchReport(result)
+      setSuccess('Resume and job description matched successfully.')
+    } catch (err) {
+      setMatchError(
+        err.message || 'Could not match this resume with the job description.'
+      )
+    } finally {
+      setMatchingJobId(null)
+    }
+  }
+
   return (
     <div className="resume-page page-content">
       <div className="resume-heading">
@@ -690,6 +731,46 @@ function ResumeAnalyzer() {
                   </div>
                 </div>
 
+                <div className="job-match-controls">
+                  <select
+                    value={matchResumeIds[job.id] || job.resume_id || ''}
+                    onChange={(event) =>
+                      setMatchResumeIds((current) => ({
+                        ...current,
+                        [job.id]: event.target.value,
+                      }))
+                    }
+                    aria-label={`Select resume for ${job.title}`}
+                  >
+                    <option value="">Select resume to match</option>
+
+                    {resumes.map((resume) => (
+                      <option key={resume.id} value={resume.id}>
+                        {resume.filename}
+                      </option>
+                    ))}
+                  </select>
+
+                  <button
+                    type="button"
+                    className="resume-primary-btn"
+                    onClick={() => handleResumeMatch(job)}
+                    disabled={matchingJobId === job.id || resumes.length === 0}
+                  >
+                    {matchingJobId === job.id ? (
+                      <>
+                        <RefreshCw size={16} className="resume-spin" />
+                        Matching...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={16} />
+                        Match Resume
+                      </>
+                    )}
+                  </button>
+                </div>
+
                 <div className="job-description-actions">
                   <button
                     type="button"
@@ -715,6 +796,142 @@ function ResumeAnalyzer() {
           )}
         </div>
       </section>
+
+      {matchError && (
+  <div className="resume-alert error">
+    <AlertCircle size={18} />
+    <span>{matchError}</span>
+    <button
+      onClick={() => setMatchError('')}
+      aria-label="Dismiss matching error"
+    >
+      <X size={16} />
+    </button>
+  </div>
+)}
+
+{matchReport && (
+  <section className="resume-analysis-section match-report">
+    <div className="resume-section-heading">
+      <div>
+        <span className="section-kicker">NOVA AI · JOB COMPATIBILITY</span>
+        <h2>Resume–Job Match Report</h2>
+        <p>
+          {matchReport.resume_filename} · {matchReport.job_title}
+          {matchReport.company ? ` at ${matchReport.company}` : ''}
+        </p>
+      </div>
+    </div>
+
+    <div className="match-score-grid">
+      {[
+        ['Overall Match', matchReport.report.match_score],
+        ['Skills', matchReport.report.skill_score],
+        ['Experience', matchReport.report.experience_score],
+        ['Education', matchReport.report.education_score],
+      ].map(([label, score]) => (
+        <article className="analysis-card match-score-card" key={label}>
+          <span>{label}</span>
+          <strong>{Math.round(score)}%</strong>
+          <div className="match-score-track">
+            <div style={{ width: `${score}%` }} />
+          </div>
+        </article>
+      ))}
+    </div>
+
+    <div className="analysis-grid">
+      <article className="analysis-card">
+        <div className="analysis-card-heading">
+          <CheckCircle2 size={19} />
+          <h3>Matched Skills</h3>
+        </div>
+
+        {matchReport.report.matched_skills?.length ? (
+          matchReport.report.matched_skills.map((item, index) => (
+            <div className="match-skill-item" key={`${item.skill}-${index}`}>
+              <strong>{item.skill}</strong>
+              <span>{item.category}</span>
+              {item.evidence && <p>{item.evidence}</p>}
+            </div>
+          ))
+        ) : (
+          <p className="analysis-empty-text">No matched skills identified.</p>
+        )}
+      </article>
+
+      <article className="analysis-card">
+        <div className="analysis-card-heading">
+          <AlertCircle size={19} />
+          <h3>Partially Matched Skills</h3>
+        </div>
+
+        {matchReport.report.partial_skills?.length ? (
+          matchReport.report.partial_skills.map((item, index) => (
+            <div className="match-skill-item" key={`${item.skill}-${index}`}>
+              <strong>{item.skill}</strong>
+              <span>{item.category}</span>
+              {item.evidence && <p>{item.evidence}</p>}
+            </div>
+          ))
+        ) : (
+          <p className="analysis-empty-text">No partially matched skills.</p>
+        )}
+      </article>
+
+      <article className="analysis-card">
+        <div className="analysis-card-heading">
+          <X size={19} />
+          <h3>Missing Skills</h3>
+        </div>
+
+        {matchReport.report.missing_skills?.length ? (
+          matchReport.report.missing_skills.map((item, index) => (
+            <div className="match-skill-item" key={`${item.skill}-${index}`}>
+              <strong>{item.skill}</strong>
+              <span>{item.category}</span>
+              {item.evidence && <p>{item.evidence}</p>}
+            </div>
+          ))
+        ) : (
+          <p className="analysis-empty-text">No missing skills identified.</p>
+        )}
+      </article>
+
+      <article className="analysis-card">
+        <div className="analysis-card-heading">
+          <BriefcaseBusiness size={19} />
+          <h3>Experience Alignment</h3>
+        </div>
+        <p>{matchReport.report.experience_analysis || 'No experience analysis available.'}</p>
+      </article>
+
+      <article className="analysis-card">
+        <div className="analysis-card-heading">
+          <GraduationCap size={19} />
+          <h3>Education Alignment</h3>
+        </div>
+        <p>{matchReport.report.education_analysis || 'No education analysis available.'}</p>
+      </article>
+
+      <article className="analysis-card">
+        <div className="analysis-card-heading">
+          <CheckCircle2 size={19} />
+          <h3>Candidate Strengths</h3>
+        </div>
+        {renderAnalysisList(matchReport.report.strengths)}
+      </article>
+
+      <article className="analysis-card">
+        <div className="analysis-card-heading">
+          <Lightbulb size={19} />
+          <h3>Recommendations</h3>
+        </div>
+        {renderAnalysisList(matchReport.report.recommendations)}
+      </article>
+    </div>
+  </section>
+)}
 
 
       <section className="resume-library">
