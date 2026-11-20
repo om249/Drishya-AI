@@ -21,6 +21,10 @@ import {
   Code2,
   Award,
   Lightbulb,
+  Plus,
+  Pencil,
+  Save,
+  Building2,
 } from 'lucide-react'
 
 import './ResumeAnalyzer.css'
@@ -67,6 +71,18 @@ function ResumeAnalyzer() {
   const [analyzingId, setAnalyzingId] = useState(null)
   const [analysisError, setAnalysisError] = useState('')
   const [analysisResume, setAnalysisResume] = useState(null)
+
+  const [jobDescriptions, setJobDescriptions] = useState([])
+  const [jobFormOpen, setJobFormOpen] = useState(false)
+  const [editingJobId, setEditingJobId] = useState(null)
+  const [savingJob, setSavingJob] = useState(false)
+
+  const [jobForm, setJobForm] = useState({
+    title: '',
+    company: '',
+    description: '',
+    resume_id: '',
+  })
 
 
   const loadResumes = useCallback(async () => {
@@ -324,6 +340,110 @@ function ResumeAnalyzer() {
     }
   }
 
+  const loadJobDescriptions = useCallback(async () => {
+    try {
+      const data = await api('/job-descriptions')
+      setJobDescriptions(Array.isArray(data) ? data : [])
+    } catch (err) {
+      setError(err.message || 'Could not load job descriptions.')
+    }
+  }, [])
+
+  useEffect(() => {
+    loadJobDescriptions()
+  }, [loadJobDescriptions])
+
+  const resetJobForm = () => {
+    setJobForm({
+      title: '',
+      company: '',
+      description: '',
+      resume_id: '',
+    })
+    setEditingJobId(null)
+    setJobFormOpen(false)
+  }
+
+  const saveJobDescription = async (event) => {
+    event.preventDefault()
+    setError('')
+    setSuccess('')
+
+    if (jobForm.description.trim().length < 50) {
+      setError('Job description must contain at least 50 characters.')
+      return
+    }
+
+    setSavingJob(true)
+
+    const payload = {
+      title: jobForm.title.trim(),
+      company: jobForm.company.trim() || null,
+      description: jobForm.description.trim(),
+      resume_id: jobForm.resume_id
+        ? Number(jobForm.resume_id)
+        : null,
+    }
+
+    try {
+      if (editingJobId) {
+        await api(`/job-descriptions/${editingJobId}`, {
+          method: 'PUT',
+          body: JSON.stringify(payload),
+        })
+        setSuccess('Job description updated successfully.')
+      } else {
+        await api('/job-descriptions', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        })
+        setSuccess('Job description saved successfully.')
+      }
+
+      resetJobForm()
+      await loadJobDescriptions()
+    } catch (err) {
+      setError(err.message || 'Could not save job description.')
+    } finally {
+      setSavingJob(false)
+    }
+  }
+
+  const editJobDescription = (job) => {
+    setJobForm({
+      title: job.title,
+      company: job.company || '',
+      description: job.description,
+      resume_id: job.resume_id ? String(job.resume_id) : '',
+    })
+    setEditingJobId(job.id)
+    setJobFormOpen(true)
+  }
+
+  const deleteJobDescription = async (job) => {
+    if (!window.confirm(`Delete "${job.title}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      await api(`/job-descriptions/${job.id}`, {
+        method: 'DELETE',
+      })
+
+      setJobDescriptions((current) =>
+        current.filter((item) => item.id !== job.id)
+      )
+
+      if (editingJobId === job.id) {
+        resetJobForm()
+      }
+
+      setSuccess('Job description deleted successfully.')
+    } catch (err) {
+      setError(err.message || 'Could not delete job description.')
+    }
+  }
+
   return (
     <div className="resume-page page-content">
       <div className="resume-heading">
@@ -416,6 +536,186 @@ function ResumeAnalyzer() {
           PDF or DOCX · Maximum file size 5 MB
         </span>
       </section>
+
+      <section className="job-manager">
+        <div className="resume-section-heading">
+          <div>
+            <span className="section-kicker">CAREER TARGETING</span>
+            <h2>Job Descriptions</h2>
+            <p>Save job requirements and connect them with your resumes.</p>
+          </div>
+
+          <button
+            className="resume-primary-btn"
+            onClick={() => {
+              if (jobFormOpen) {
+                resetJobForm()
+              } else {
+                setJobFormOpen(true)
+              }
+            }}
+          >
+            {jobFormOpen ? <X size={17} /> : <Plus size={17} />}
+            {jobFormOpen ? 'Close Form' : 'Add Job'}
+          </button>
+        </div>
+
+        {jobFormOpen && (
+          <form className="job-form" onSubmit={saveJobDescription}>
+            <div className="job-form-heading">
+              <Building2 size={21} />
+              <h3>{editingJobId ? 'Edit Job Description' : 'Add Job Description'}</h3>
+            </div>
+
+            <div className="job-form-grid">
+              <label>
+                Job Title *
+                <input
+                  type="text"
+                  value={jobForm.title}
+                  onChange={(e) =>
+                    setJobForm({ ...jobForm, title: e.target.value })
+                  }
+                  placeholder="e.g. Java Developer"
+                  maxLength={150}
+                  required
+                />
+              </label>
+
+              <label>
+                Company Name
+                <input
+                  type="text"
+                  value={jobForm.company}
+                  onChange={(e) =>
+                    setJobForm({ ...jobForm, company: e.target.value })
+                  }
+                  placeholder="e.g. Google"
+                  maxLength={150}
+                />
+              </label>
+            </div>
+
+            <label>
+              Job Description *
+              <textarea
+                value={jobForm.description}
+                onChange={(e) =>
+                  setJobForm({ ...jobForm, description: e.target.value })
+                }
+                placeholder="Paste the complete job description, responsibilities, required skills, qualifications..."
+                rows={8}
+                maxLength={30000}
+                required
+              />
+              <span className="job-character-count">
+                {jobForm.description.length.toLocaleString()} / 30,000 characters
+                · Minimum 50
+              </span>
+            </label>
+
+            <label>
+              Associate Resume (Optional)
+              <select
+                value={jobForm.resume_id}
+                onChange={(e) =>
+                  setJobForm({ ...jobForm, resume_id: e.target.value })
+                }
+              >
+                <option value="">No resume selected</option>
+                {resumes.map((resume) => (
+                  <option key={resume.id} value={resume.id}>
+                    {resume.filename}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="job-form-actions">
+              <button
+                type="button"
+                className="job-secondary-btn"
+                onClick={resetJobForm}
+                disabled={savingJob}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                className="resume-primary-btn"
+                disabled={savingJob}
+              >
+                {savingJob ? (
+                  <RefreshCw size={17} className="resume-spin" />
+                ) : (
+                  <Save size={17} />
+                )}
+                {savingJob ? 'Saving...' : editingJobId ? 'Update Job' : 'Save Job'}
+              </button>
+            </div>
+          </form>
+        )}
+
+        <div className="job-description-list">
+          {jobDescriptions.length === 0 ? (
+            <div className="resume-empty-state">
+              <Building2 size={32} />
+              <h3>No job descriptions saved</h3>
+              <p>Add a job description to prepare for job-specific resume matching.</p>
+            </div>
+          ) : (
+            jobDescriptions.map((job) => (
+              <article className="job-description-card" key={job.id}>
+                <div className="job-description-icon">
+                  <Building2 size={22} />
+                </div>
+
+                <div className="job-description-info">
+                  <h3>{job.title}</h3>
+                  <p>{job.company || 'Company not specified'}</p>
+
+                  <div className="resume-card-meta">
+                    <span>
+                      {formatDate(job.created_at)}
+                    </span>
+                    <span>
+                      {job.resume_id
+                        ? `Resume #${job.resume_id}`
+                        : 'No resume associated'}
+                    </span>
+                    <span>
+                      {job.description.length.toLocaleString()} characters
+                    </span>
+                  </div>
+                </div>
+
+                <div className="job-description-actions">
+                  <button
+                    type="button"
+                    onClick={() => editJobDescription(job)}
+                    title="Edit job description"
+                    aria-label={`Edit ${job.title}`}
+                  >
+                    <Pencil size={17} />
+                  </button>
+
+                  <button
+                    type="button"
+                    className="delete"
+                    onClick={() => deleteJobDescription(job)}
+                    title="Delete job description"
+                    aria-label={`Delete ${job.title}`}
+                  >
+                    <Trash2 size={17} />
+                  </button>
+                </div>
+              </article>
+            ))
+          )}
+        </div>
+      </section>
+
 
       <section className="resume-library">
         <div className="resume-section-heading">

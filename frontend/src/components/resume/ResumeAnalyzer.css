@@ -633,3 +633,193 @@
     padding: 8px 10px;
   }
 }
+
+
+
+/* Job Description Manager */
+
+.job-manager {
+  margin-top: 38px;
+}
+
+.job-form {
+  display: grid;
+  gap: 19px;
+  padding: 24px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  border-radius: 17px;
+  background: var(--card-bg, rgba(30, 30, 45, 0.55));
+  animation: resumeFadeIn 0.25s ease;
+}
+
+.job-form-heading {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  color: #a78bfa;
+}
+
+.job-form-heading h3 {
+  margin: 0;
+  color: var(--text-primary, #f4f4f5);
+  font-size: 17px;
+}
+
+.job-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.job-form label {
+  display: grid;
+  gap: 8px;
+  color: var(--text-primary, #e4e4e7);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.job-form input,
+.job-form textarea,
+.job-form select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 13px;
+  border: 1px solid var(--border-color, rgba(150, 150, 170, 0.25));
+  border-radius: 10px;
+  outline: none;
+  background: var(--surface, rgba(255, 255, 255, 0.035));
+  color: var(--text-primary, #f4f4f5);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.job-form input:focus,
+.job-form textarea:focus,
+.job-form select:focus {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12);
+}
+
+.job-form textarea {
+  resize: vertical;
+  min-height: 150px;
+  line-height: 1.6;
+}
+
+.job-form select option {
+  background: #171720;
+  color: white;
+}
+
+.job-character-count {
+  color: var(--text-secondary, #9292a5);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.job-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.job-secondary-btn {
+  padding: 11px 17px;
+  border: 1px solid var(--border-color, rgba(150, 150, 170, 0.25));
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-primary, inherit);
+  cursor: pointer;
+}
+
+.job-description-list {
+  display: grid;
+  gap: 12px;
+}
+
+.job-description-card {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-width: 0;
+  padding: 17px;
+  border: 1px solid var(--border-color, rgba(150, 150, 170, 0.2));
+  border-radius: 15px;
+  background: var(--surface, rgba(255, 255, 255, 0.02));
+}
+
+.job-description-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 47px;
+  height: 47px;
+  border-radius: 13px;
+  color: #a78bfa;
+  background: rgba(124, 58, 237, 0.12);
+}
+
+.job-description-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.job-description-info h3 {
+  margin: 0 0 5px;
+  font-size: 15px;
+}
+
+.job-description-info > p {
+  margin: 0 0 9px;
+  color: var(--text-secondary, #9292a5);
+  font-size: 13px;
+}
+
+.job-description-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.job-description-actions button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--border-color, rgba(150, 150, 170, 0.2));
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-primary, inherit);
+  cursor: pointer;
+}
+
+.job-description-actions button:hover {
+  color: #a78bfa;
+  border-color: #8b5cf6;
+}
+
+.job-description-actions button.delete:hover {
+  color: #f87171;
+  border-color: #f87171;
+}
+
+@media (max-width: 650px) {
+  .job-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .job-description-card {
+    flex-wrap: wrap;
+  }
+
+  .job-description-actions {
+    margin-left: auto;
+  }
+
+  .job-form {
+    padding: 17px;
+  }
+}
