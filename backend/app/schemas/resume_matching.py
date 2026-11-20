@@ -1,8 +1,10 @@
-
 from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
+
+
+MatchStatus = Literal["matched", "partial", "missing"]
 
 
 class JobRequirementAnalysis(BaseModel):
@@ -16,21 +18,26 @@ class JobRequirementAnalysis(BaseModel):
 class SkillMatch(BaseModel):
     skill: str
     category: Literal["required", "preferred"]
-    status: Literal["matched", "partial", "missing"]
+    status: MatchStatus
     evidence: str = ""
 
 
 class ResumeJobMatchReport(BaseModel):
-    match_score: float = Field(ge=0, le=100)
-    skill_score: float = Field(ge=0, le=100)
-    experience_score: float = Field(ge=0, le=100)
-    education_score: float = Field(ge=0, le=100)
+    match_score: float = Field(default=0, ge=0, le=100)
+    skill_score: float = Field(default=0, ge=0, le=100)
+    experience_score: float = Field(default=0, ge=0, le=100)
+    education_score: float = Field(default=0, ge=0, le=100)
 
     matched_skills: list[SkillMatch] = Field(default_factory=list)
     partial_skills: list[SkillMatch] = Field(default_factory=list)
     missing_skills: list[SkillMatch] = Field(default_factory=list)
 
+    experience_status: MatchStatus | None = None
+    experience_evidence: str = ""
     experience_analysis: str = ""
+
+    education_status: MatchStatus | None = None
+    education_evidence: str = ""
     education_analysis: str = ""
 
     strengths: list[str] = Field(default_factory=list)

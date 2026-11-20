@@ -11,6 +11,7 @@ from app.api.routes import (
     users,
     resume,
     job_descriptions,
+    resume_matching,
 )
 
 
@@ -43,6 +44,7 @@ app.include_router(interviews.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
 app.include_router(resume.router, prefix="/api")
 app.include_router(job_descriptions.router, prefix="/api")
+app.include_router(resume_matching.router, prefix="/api")
 
 
 @app.get("/")
