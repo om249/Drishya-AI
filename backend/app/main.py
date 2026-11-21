@@ -1,4 +1,4 @@
-
+# We have to take break for few days cause of Term-end exam
 from fastapi import FastAPI
 import os
 
